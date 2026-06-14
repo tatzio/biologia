@@ -8923,7 +8923,7 @@ const questionsData = [
                             ⚡ Teoria w pigułce
                         </h3>
                         <div class="theory-summary" style="line-height: 1.7; color: var(--text-body); font-size: 0.95rem;">
-                            ${formatMarkdownAndMath(theory.summary)}
+                            ${formatTheorySummary(theory.summary)}
                         </div>
                     </div>
 
@@ -8932,11 +8932,84 @@ const questionsData = [
                             💡 Wskazówki i pułapki maturalne
                         </h3>
                         <div style="color: var(--text-body); font-size: 0.9rem; line-height: 1.6;">
-                            ${formatMarkdownAndMath(theory.tips)}
+                            ${formatTheorySummary(theory.tips)}
                         </div>
                     </div>
                 </div>
             `;
+        }
+
+        // Helper to format Theory Summary with beautiful nested list indents
+        function formatTheorySummary(text) {
+            if (!text) return "";
+            
+            // First, run standard markdown/math formatting
+            let html = formatMarkdownAndMath(text);
+            
+            // Split by <br> tags (case insensitive)
+            const lines = html.split(/<br\s*\/?>/i);
+            
+            let formattedLines = lines.map(line => {
+                const trimmed = line.trim();
+                if (!trimmed) {
+                    return '<div style="height: 0.6rem;"></div>';
+                }
+                
+                // Count leading spaces of the original line
+                const leadingSpacesMatch = line.match(/^(\s*)/);
+                const leadingSpacesCount = leadingSpacesMatch ? leadingSpacesMatch[1].length : 0;
+                
+                let level = 0;
+                
+                // Prefixes:
+                const isBullet = /^[•\u2022]/.test(trimmed);
+                const isHyphen = /^[-–—]/.test(trimmed);
+                const isNumberedList = /^\d+[\.\)]/.test(trimmed);
+                const isLetteredList = /^[a-z][\.\)]/i.test(trimmed);
+                
+                // Check if it's a main heading, e.g. starting with <strong>[Number].
+                const isMainHeading = /^(?:<strong>|<strong\s+[^>]*>)\s*\d+[\.\)]/.test(trimmed);
+                
+                if (isMainHeading) {
+                    level = 0;
+                } else if (isBullet || isHyphen) {
+                    if (leadingSpacesCount === 0) level = 1;
+                    else if (leadingSpacesCount <= 3) level = 2;
+                    else level = 3;
+                } else if (isNumberedList || isLetteredList) {
+                    if (leadingSpacesCount === 0) {
+                        level = isLetteredList ? 1 : 0;
+                    } else if (leadingSpacesCount <= 3) {
+                        level = 2;
+                    } else {
+                        level = 3;
+                    }
+                } else {
+                    // Plain text line
+                    if (leadingSpacesCount > 0) {
+                        if (leadingSpacesCount <= 3) level = 1;
+                        else level = 2;
+                    } else {
+                        level = 0;
+                    }
+                }
+                
+                // Strip the leading spaces from the line content since we handle layout with padding
+                const cleanLine = line.replace(/^\s+/, '');
+                
+                // Construct the styled wrapper
+                if (level === 0) {
+                    return `<div style="margin: 0.35rem 0; line-height: 1.6;">${cleanLine}</div>`;
+                } else if (level === 1) {
+                    return `<div style="padding-left: 1.5rem; text-indent: -1.2rem; margin: 0.3rem 0; line-height: 1.6;">${cleanLine}</div>`;
+                } else if (level === 2) {
+                    return `<div style="padding-left: 3rem; text-indent: -1.2rem; margin: 0.25rem 0; line-height: 1.6;">${cleanLine}</div>`;
+                } else {
+                    return `<div style="padding-left: 4.5rem; text-indent: -1.2rem; margin: 0.25rem 0; line-height: 1.6;">${cleanLine}</div>`;
+                }
+            });
+            
+            return formattedLines.join('');
         }
 
         // Helper to get random subpool
